@@ -1,5 +1,5 @@
-# Incept
+# Introduction
 Deep Clustering For Images
 
-## Citation
+# Citation
 Our paper on this benchmark will be released soon!
