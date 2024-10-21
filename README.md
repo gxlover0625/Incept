@@ -1,4 +1,4 @@
-# Introduction
+# About
 Deep Clustering For Images
 
 # Citation
