@@ -1,5 +1,7 @@
 device: cuda:0
 
+data_dir: /data2/liangguanbao/opendeepclustering/datasets
+
 dims:
   - 784
   - 500
