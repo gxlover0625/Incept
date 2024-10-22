@@ -18,7 +18,6 @@ def seed_everything(seed = 42):
     torch.backends.cudnn.benchmark = False
 
 def load_conf(config_file):
-    # 读取yaml配置文件，转化为easydict的形式
     with open(config_file, 'r') as f:
         config = yaml.safe_load(f)
         config = easydict.EasyDict(config)
