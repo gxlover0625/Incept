@@ -2,4 +2,6 @@ __pycache__/
 /test.ipynb
 /test.py
 /test.jsonl
+/test.json
+/test.yaml
 test/
