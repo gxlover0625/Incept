@@ -4,7 +4,7 @@ import torch.nn as nn
 from collections import OrderedDict
 from cytoolz.itertoolz import concat, sliding_window
 from torch.nn import Parameter
-from typing import Callable, Iterable, Optional, Tuple, List
+from typing import Callable, Iterable, List, Optional, Tuple
 
 class ClusterAssignment(nn.Module):
     def __init__(
