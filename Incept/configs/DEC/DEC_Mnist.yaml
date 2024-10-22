@@ -1,3 +1,5 @@
+device: cuda:0
+
 dims:
   - 784
   - 500

@@ -191,7 +191,7 @@ class DEC:
     def pretrain(self):
         self.autoencoder = StackedDenoisingAutoEncoder(
             self.config.dims, final_activation=None
-        )
+        ).to(self.config.device)
         print(self.autoencoder)
 
     def train(self):
