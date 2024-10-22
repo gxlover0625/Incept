@@ -35,9 +35,14 @@ def ari(true_labels, pred_labels):
 class Evaluator:
     def __init__(self, metrics = ["acc", "nmi", "ari"]):
         self.metrics = metrics
+        self.funcs = {
+            "acc": acc,
+            "nmi": nmi,
+            "ari": ari
+        }
     
     def eval(self, true_labels, pred_labels):
+        results = {}
         for m in self.metrics:
-            pass
-            
-
+            results[m] = self.funcs[m](true_labels, pred_labels)
+        return results
