@@ -188,7 +188,7 @@ class DEC:
     def __init__(self):
         pass
 
-    def fit(self):
+    def train(self):
         pass
 
     def predict(self):
