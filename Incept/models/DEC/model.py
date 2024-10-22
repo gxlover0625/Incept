@@ -6,75 +6,6 @@ from cytoolz.itertoolz import concat, sliding_window
 from torch.nn import Parameter
 from typing import Callable, Iterable, List, Optional, Tuple
 
-class ClusterAssignment(nn.Module):
-    def __init__(
-        self,
-        cluster_number: int,
-        embedding_dimension: int,
-        alpha: float = 1.0,
-        cluster_centers: Optional[torch.Tensor] = None,
-    ) -> None:
-        """
-        Module to handle the soft assignment, for a description see in 3.1.1. in Xie/Girshick/Farhadi,
-        where the Student's t-distribution is used measure similarity between feature vector and each
-        cluster centroid.
-
-        :param cluster_number: number of clusters
-        :param embedding_dimension: embedding dimension of feature vectors
-        :param alpha: parameter representing the degrees of freedom in the t-distribution, default 1.0
-        :param cluster_centers: clusters centers to initialise, if None then use Xavier uniform
-        """
-        super(ClusterAssignment, self).__init__()
-        self.embedding_dimension = embedding_dimension
-        self.cluster_number = cluster_number
-        self.alpha = alpha
-        if cluster_centers is None:
-            initial_cluster_centers = torch.zeros(
-                self.cluster_number, self.embedding_dimension, dtype=torch.float
-            )
-            nn.init.xavier_uniform_(initial_cluster_centers)
-        else:
-            initial_cluster_centers = cluster_centers
-        self.cluster_centers = Parameter(initial_cluster_centers)
-
-    def forward(self, batch: torch.Tensor) -> torch.Tensor:
-        """
-        Compute the soft assignment for a batch of feature vectors, returning a batch of assignments
-        for each cluster.
-
-        :param batch: FloatTensor of [batch size, embedding dimension]
-        :return: FloatTensor [batch size, number of clusters]
-        """
-        norm_squared = torch.sum((batch.unsqueeze(1) - self.cluster_centers) ** 2, 2)
-        numerator = 1.0 / (1.0 + (norm_squared / self.alpha))
-        power = float(self.alpha + 1) / 2
-        numerator = numerator ** power
-        return numerator / torch.sum(numerator, dim=1, keepdim=True)
-
-def build_units(
-    dimensions: Iterable[int], activation: Optional[torch.nn.Module]
-) -> List[torch.nn.Module]:
-    """
-    Given a list of dimensions and optional activation, return a list of units where each unit is a linear
-    layer followed by an activation layer.
-
-    :param dimensions: iterable of dimensions for the chain
-    :param activation: activation layer to use e.g. nn.ReLU, set to None to disable
-    :return: list of instances of Sequential
-    """
-
-    def single_unit(in_dimension: int, out_dimension: int) -> torch.nn.Module:
-        unit = [("linear", nn.Linear(in_dimension, out_dimension))]
-        if activation is not None:
-            unit.append(("activation", activation))
-        return nn.Sequential(OrderedDict(unit))
-
-    return [
-        single_unit(embedding_dimension, hidden_dimension)
-        for embedding_dimension, hidden_dimension in sliding_window(2, dimensions)
-    ]
-
-
 def default_initialise_weight_bias_(
     weight: torch.Tensor, bias: torch.Tensor, gain: float
 ) -> None:
@@ -89,6 +20,27 @@ def default_initialise_weight_bias_(
     nn.init.xavier_uniform_(weight, gain)
     nn.init.constant_(bias, 0)
 
+def build_units(
+    dimensions: Iterable[int], activation: Optional[torch.nn.Module]
+) -> List[torch.nn.Module]:
+    """
+    Given a list of dimensions and optional activation, return a list of units where each unit is a linear
+    layer followed by an activation layer.
+
+    :param dimensions: iterable of dimensions for the chain
+    :param activation: activation layer to use e.g. nn.ReLU, set to None to disable
+    :return: list of instances of Sequential
+    """
+    def single_unit(in_dimension: int, out_dimension: int) -> torch.nn.Module:
+        unit = [("linear", nn.Linear(in_dimension, out_dimension))]
+        if activation is not None:
+            unit.append(("activation", activation))
+        return nn.Sequential(OrderedDict(unit))
+
+    return [
+        single_unit(embedding_dimension, hidden_dimension)
+        for embedding_dimension, hidden_dimension in sliding_window(2, dimensions)
+    ]
 
 class StackedDenoisingAutoEncoder(nn.Module):
     def __init__(
@@ -151,7 +103,52 @@ class StackedDenoisingAutoEncoder(nn.Module):
         encoded = self.encoder(batch)
         return self.decoder(encoded)
 
-class DEC(nn.Module):
+class ClusterAssignment(nn.Module):
+    def __init__(
+        self,
+        cluster_number: int,
+        embedding_dimension: int,
+        alpha: float = 1.0,
+        cluster_centers: Optional[torch.Tensor] = None,
+    ) -> None:
+        """
+        Module to handle the soft assignment, for a description see in 3.1.1. in Xie/Girshick/Farhadi,
+        where the Student's t-distribution is used measure similarity between feature vector and each
+        cluster centroid.
+
+        :param cluster_number: number of clusters
+        :param embedding_dimension: embedding dimension of feature vectors
+        :param alpha: parameter representing the degrees of freedom in the t-distribution, default 1.0
+        :param cluster_centers: clusters centers to initialise, if None then use Xavier uniform
+        """
+        super(ClusterAssignment, self).__init__()
+        self.embedding_dimension = embedding_dimension
+        self.cluster_number = cluster_number
+        self.alpha = alpha
+        if cluster_centers is None:
+            initial_cluster_centers = torch.zeros(
+                self.cluster_number, self.embedding_dimension, dtype=torch.float
+            )
+            nn.init.xavier_uniform_(initial_cluster_centers)
+        else:
+            initial_cluster_centers = cluster_centers
+        self.cluster_centers = Parameter(initial_cluster_centers)
+
+    def forward(self, batch: torch.Tensor) -> torch.Tensor:
+        """
+        Compute the soft assignment for a batch of feature vectors, returning a batch of assignments
+        for each cluster.
+
+        :param batch: FloatTensor of [batch size, embedding dimension]
+        :return: FloatTensor [batch size, number of clusters]
+        """
+        norm_squared = torch.sum((batch.unsqueeze(1) - self.cluster_centers) ** 2, 2)
+        numerator = 1.0 / (1.0 + (norm_squared / self.alpha))
+        power = float(self.alpha + 1) / 2
+        numerator = numerator ** power
+        return numerator / torch.sum(numerator, dim=1, keepdim=True)
+
+class DECModel(nn.Module):
     def __init__(
         self,
         cluster_number: int,
@@ -168,7 +165,7 @@ class DEC(nn.Module):
         :param encoder: encoder to use
         :param alpha: parameter representing the degrees of freedom in the t-distribution, default 1.0
         """
-        super(DEC, self).__init__()
+        super(DECModel, self).__init__()
         self.encoder = encoder
         self.hidden_dimension = hidden_dimension
         self.cluster_number = cluster_number
@@ -186,3 +183,13 @@ class DEC(nn.Module):
         :return: [batch size, number of clusters] FloatTensor
         """
         return self.assignment(self.encoder(batch))
+
+class DEC:
+    def __init__(self):
+        pass
+
+    def fit(self):
+        pass
+
+    def predict(self):
+        pass
