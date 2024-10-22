@@ -189,10 +189,13 @@ class DEC:
         self.config = config
 
     def pretrain(self):
-        pass
+        self.autoencoder = StackedDenoisingAutoEncoder(
+            self.config.dims, final_activation=None
+        )
+        print(self.autoencoder)
 
     def train(self):
-        pass
+        self.pretrain()
 
     def predict(self):
         pass
@@ -200,3 +203,8 @@ class DEC:
 import sys
 sys.path.append("/data2/liangguanbao/opendeepclustering/Incept")
 from Incept.utils import load_config
+
+config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
+model = DEC(config)
+print(model.config)
+model.train()
