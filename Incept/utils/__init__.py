@@ -1,1 +1,1 @@
-from .common_utils import seed_everything
+from .common_utils import seed_everything, load_config

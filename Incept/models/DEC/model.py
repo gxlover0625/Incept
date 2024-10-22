@@ -185,7 +185,10 @@ class DECModel(nn.Module):
         return self.assignment(self.encoder(batch))
 
 class DEC:
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
+
+    def pretrain(self):
         pass
 
     def train(self):
@@ -193,3 +196,7 @@ class DEC:
 
     def predict(self):
         pass
+
+import sys
+sys.path.append("/data2/liangguanbao/opendeepclustering/Incept")
+from Incept.utils import load_config
