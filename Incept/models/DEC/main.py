@@ -117,7 +117,8 @@ class DECTrainer:
         actual = torch.cat(actual).long()
         predicted = kmeans.fit_predict(torch.cat(features).numpy())
         predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
-        _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
+        # _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
+        accuracy = acc(actual.cpu().numpy(), predicted)
         cluster_centers = torch.tensor(
             kmeans.cluster_centers_, dtype=torch.float, requires_grad=True
         )
@@ -242,6 +243,7 @@ class DECTrainer:
 import sys
 sys.path.append("/data2/liangguanbao/opendeepclustering/Incept")
 from Incept.utils import load_config, seed_everything
+from Incept.evaluation import acc
 
 seed_everything(42)
 
@@ -255,7 +257,9 @@ ds_train = CachedMNIST(
 autoencoder = StackedDenoisingAutoEncoder(
     [28 * 28, 500, 500, 2000, 10], final_activation=None
 )
-autoencoder.load_state_dict(torch.load(os.path.join(config.output_dir, "autoencoder.pth")))
+# print(autoencoder.encoder[0][0].weight)
+# exit(0)
+# autoencoder.load_state_dict(torch.load(os.path.join(config.output_dir, "autoencoder.pth")))
 
 model = DEC(cluster_number=10, hidden_dimension=10, encoder=autoencoder.encoder)
 model.to(config.device)
