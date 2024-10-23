@@ -30,11 +30,14 @@ def target_transform(target):
 class DECPretrainer:
     def __init__(self, config):
         self.config = config
+        self.autoencoder = StackedDenoisingAutoEncoder(
+            config.dims, final_activation=None
+        ).to(config.device)
 
     def pretrain(
         self,
         dataset,
-        autoencoder: StackedDenoisingAutoEncoder,
+        # autoencoder: StackedDenoisingAutoEncoder,
         epochs: int,
         batch_size: int,
         optimizer: Callable[[torch.nn.Module], torch.optim.Optimizer],
@@ -51,11 +54,11 @@ class DECPretrainer:
     ):
         current_dataset = dataset
         current_validation = validation
-        number_of_subautoencoders = len(autoencoder.dimensions) - 1
+        number_of_subautoencoders = len(self.autoencoder.dimensions) - 1
         for index in range(number_of_subautoencoders):
-            encoder, decoder = autoencoder.get_stack(index)
-            embedding_dimension = autoencoder.dimensions[index]
-            hidden_dimension = autoencoder.dimensions[index + 1]
+            encoder, decoder = self.autoencoder.get_stack(index)
+            embedding_dimension = self.autoencoder.dimensions[index]
+            hidden_dimension = self.autoencoder.dimensions[index + 1]
             # manual override to prevent corruption for the last subautoencoder
             if index == (number_of_subautoencoders - 1):
                 corruption = None
@@ -284,9 +287,7 @@ from Incept.utils import load_config, seed_everything
 from Incept.utils.data import CommonDataset
 
 seed_everything(42)
-
 config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
-trainer = DECPretrainer(config)
 
 ds_train = CommonDataset(
     config.dataset_name,
@@ -306,16 +307,13 @@ ds_val = CommonDataset(
     config.device
 )
 
-
-# ds_val = CachedMNIST(
-#     train=False, cuda=config.device, testing_mode=False
-# )
-autoencoder = StackedDenoisingAutoEncoder(
-    [28 * 28, 500, 500, 2000, 10], final_activation=None
-).to(config.device)
+trainer = DECPretrainer(config)
+# autoencoder = StackedDenoisingAutoEncoder(
+#     [28 * 28, 500, 500, 2000, 10], final_activation=None
+# ).to(config.device)
 trainer.pretrain(
     ds_train,
-    autoencoder,
+    # autoencoder,
     cuda=config.device,
     validation=ds_val,
     epochs=config.pretrain_epochs,
@@ -324,10 +322,10 @@ trainer.pretrain(
     scheduler=lambda x: StepLR(x, 100, gamma=0.1),
     corruption=0.2,
 )
-ae_optimizer = SGD(params=autoencoder.parameters(), lr=0.1, momentum=0.9)
+ae_optimizer = SGD(params=trainer.autoencoder.parameters(), lr=0.1, momentum=0.9)
 trainer.train(
     ds_train,
-    autoencoder,
+    trainer.autoencoder,
     cuda=config.device,
     validation=ds_val,
     epochs=config.finetune_epochs,
@@ -341,7 +339,7 @@ trainer.train(
 # 保存autoencoder
 if not os.path.exists(config.output_dir):
     os.mkdir(config.output_dir)
-torch.save(autoencoder.state_dict(), os.path.join(config.output_dir, "autoencoder.pth"))
+torch.save(trainer.autoencoder.state_dict(), os.path.join(config.output_dir, "autoencoder.pth"))
 
 # 加载autoencoder
 # autoencoder = StackedDenoisingAutoEncoder(
