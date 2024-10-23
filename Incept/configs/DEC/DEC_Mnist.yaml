@@ -1,7 +1,4 @@
-device: cuda:0
-
-data_dir: /data2/liangguanbao/opendeepclustering/datasets
-
+### model
 dims:
   - 784
   - 500
@@ -9,5 +6,20 @@ dims:
   - 2000
   - 10
 
+### device
+device: cuda:0
+
+### dataset
+data_dir: /data2/liangguanbao/opendeepclustering/datasets
+
+### output
+output_dir: /data2/liangguanbao/opendeepclustering/saves/mnist
+
+### pretrain
 pretrain_epochs: 300
+finetune_epochs: 500
 batch_size: 256
+
+### train
+
+### eval
