@@ -288,15 +288,12 @@ seed_everything(42)
 config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
 trainer = DECPretrainer(config)
 
-# ds_train = CachedMNIST(
-#     train=True, cuda=config.device, testing_mode=False
-# )
 ds_train = CommonDataset(
     config.dataset_name,
     config.data_dir,
     True,
-    transforms.Compose([transforms.Lambda(img_transform)]),
-    transforms.Compose([transforms.Lambda(target_transform)]),
+    transforms.Lambda(img_transform),
+    transforms.Lambda(target_transform),
     config.device
 )
 
@@ -304,8 +301,8 @@ ds_val = CommonDataset(
     config.dataset_name,
     config.data_dir,
     False,
-    transforms.Compose([transforms.Lambda(img_transform)]),
-    transforms.Compose([transforms.Lambda(target_transform)]),
+    transforms.Lambda(img_transform),
+    transforms.Lambda(target_transform),
     config.device
 )
 
