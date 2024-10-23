@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
@@ -13,10 +14,10 @@ class CachedMNIST(Dataset):
 
     @staticmethod
     def _transformation(img):
-        return (
-            torch.ByteTensor(torch.ByteStorage.from_buffer(img.tobytes())).float()
-            * 0.02
-        )
+        np_array = np.array(img, dtype = np.uint8)
+        tensor = torch.from_numpy(np_array).reshape(-1)
+        tensor = tensor.float() * 0.02
+        return tensor
 
     def __getitem__(self, index: int) -> torch.Tensor:
         if index not in self._cache:
@@ -29,4 +30,5 @@ class CachedMNIST(Dataset):
         return self._cache[index]
 
     def __len__(self) -> int:
-        return 128 if self.testing_mode else len(self.ds)
+        return len(self.ds)
+

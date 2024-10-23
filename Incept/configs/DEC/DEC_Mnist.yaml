@@ -10,6 +10,7 @@ dims:
 device: cuda:0
 
 ### dataset
+dataset_name: mnist
 data_dir: /data2/liangguanbao/opendeepclustering/datasets
 
 ### output

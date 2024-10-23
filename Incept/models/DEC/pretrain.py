@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import sys
 import torch
@@ -8,6 +9,7 @@ from torch.optim import SGD
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 from torch.utils.tensorboard import SummaryWriter
+from torchvision.transforms import transforms
 from tqdm import tqdm
 from typing import Any, Callable, Iterable, List, Optional, Tuple
 
@@ -15,6 +17,15 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_path)
 from data_transform import CachedMNIST
 from model import DenoisingAutoencoder, StackedDenoisingAutoEncoder
+
+def img_transform(img):
+    np_array = np.array(img, dtype = np.uint8)
+    tensor = torch.from_numpy(np_array).reshape(-1)
+    tensor = tensor.float() * 0.02
+    return tensor
+
+def target_transform(target):
+    return torch.tensor(target, dtype=torch.long)
 
 class DECPretrainer:
     def __init__(self, config):
@@ -270,19 +281,38 @@ class DECPretrainer:
 import sys
 sys.path.append("/data2/liangguanbao/opendeepclustering/Incept")
 from Incept.utils import load_config, seed_everything
+from Incept.utils.data import CommonDataset
 
 seed_everything(42)
 
 config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
 trainer = DECPretrainer(config)
 
-ds_train = CachedMNIST(
-    train=True, cuda=config.device, testing_mode=False
+# ds_train = CachedMNIST(
+#     train=True, cuda=config.device, testing_mode=False
+# )
+ds_train = CommonDataset(
+    config.dataset_name,
+    config.data_dir,
+    True,
+    transforms.Compose([transforms.Lambda(img_transform)]),
+    transforms.Compose([transforms.Lambda(target_transform)]),
+    config.device
 )
 
-ds_val = CachedMNIST(
-    train=False, cuda=config.device, testing_mode=False
+ds_val = CommonDataset(
+    config.dataset_name,
+    config.data_dir,
+    False,
+    transforms.Compose([transforms.Lambda(img_transform)]),
+    transforms.Compose([transforms.Lambda(target_transform)]),
+    config.device
 )
+
+
+# ds_val = CachedMNIST(
+#     train=False, cuda=config.device, testing_mode=False
+# )
 autoencoder = StackedDenoisingAutoEncoder(
     [28 * 28, 500, 500, 2000, 10], final_activation=None
 ).to(config.device)
