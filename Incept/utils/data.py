@@ -1,8 +1,5 @@
-import torch
-import numpy as np
 from torch.utils.data import Dataset
 from torchvision.datasets import MNIST
-from torchvision.transforms import transforms
 
 class CommonDataset(Dataset):
     def __init__(self, dataset_name, data_dir, split, img_transform = None, target_transform = None, device = "cuda"):
