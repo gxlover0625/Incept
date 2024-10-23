@@ -8,3 +8,6 @@ dims:
   - 500
   - 2000
   - 10
+
+pretrain_epochs: 300
+batch_size: 256

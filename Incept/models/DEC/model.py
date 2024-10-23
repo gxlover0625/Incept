@@ -444,7 +444,7 @@ class DEC:
                         output = autoencoder(F.dropout(batch, corruption))
                     else:
                         output = autoencoder(batch)
-                    
+                                        
                     loss = loss_function(output, batch)
                     loss_value = float(loss.item())
                     optimizer.zero_grad()
@@ -567,7 +567,9 @@ class CachedMNIST(Dataset):
 
 import sys
 sys.path.append("/data2/liangguanbao/opendeepclustering/Incept")
-from Incept.utils import load_config
+from Incept.utils import load_config, seed_everything
+
+seed_everything(42)
 
 config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
 model = DEC(config)
@@ -583,9 +585,22 @@ ds_val = CachedMNIST(
 autoencoder = StackedDenoisingAutoEncoder(
     [28 * 28, 500, 500, 2000, 10], final_activation=None
 ).to(config.device)
+# print(autoencoder.encoder)
+# print(autoencoder.encoder[0][0].weight.data)
+model.pretrain(
+    ds_train,
+    autoencoder,
+    cuda=config.device,
+    validation=ds_val,
+    epochs=config.pretrain_epochs,
+    batch_size=config.batch_size,
+    optimizer=lambda model: SGD(model.parameters(), lr=0.1, momentum=0.9),
+    scheduler=lambda x: StepLR(x, 100, gamma=0.1),
+    corruption=0.2,
+)
 # print(autoencoder)
 
-print(ds_train[0][0].shape)
+# print(ds_train[0][0][300:350])
 
 # print(model.config)
 # model.train()
