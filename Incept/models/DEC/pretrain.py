@@ -125,17 +125,20 @@ class DECPretrainer:
     def train(
         self,
         train_dataset,
-        val_dataset = None
+        val_dataset = None,
+        eval_callback = None
     ):
         print("Pretraining stage.")
         self.pretrain_autoencoder(
             train_dataset,
-            val_dataset
+            val_dataset,
+            eval_callback=None
         )
         print("Training stage.")
         self.finetune_autoencoder(
             train_dataset,
-            val_dataset
+            val_dataset,
+            eval_callback=eval_callback
         )
         if not os.path.exists(self.config.output_dir):
             os.makedirs(self.config.output_dir, exist_ok=True)
@@ -150,6 +153,14 @@ from Incept.utils.data import CommonDataset
 seed_everything(42)
 config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
 
+writer = SummaryWriter(log_dir="/data2/liangguanbao/opendeepclustering/saves/DEC/mnist")
+def training_callback(epoch, lr, loss, validation_loss):
+    writer.add_scalars(
+        "data/autoencoder",
+        {"lr": lr, "loss": loss, "validation_loss": validation_loss,},
+        epoch,
+    )
+
 ds_train = CommonDataset(
     config.dataset_name, config.data_dir, True,
     img_transform, target_transform,
@@ -161,4 +172,4 @@ ds_val = CommonDataset(
 )
 
 trainer = DECPretrainer(config)
-trainer.train(ds_train, ds_val)
+trainer.train(ds_train, ds_val, training_callback)
