@@ -1,17 +1,12 @@
-import numpy as np
 import os
 import sys
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from torch.optim import SGD
 from torch.optim.lr_scheduler import StepLR
-from torch.utils.data import Dataset, DataLoader, TensorDataset
+from torch.utils.data import TensorDataset
 from torch.utils.tensorboard import SummaryWriter
-from torchvision.transforms import transforms
-from tqdm import tqdm
-from typing import Any, Callable, Iterable, List, Optional, Tuple
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_path)
@@ -102,10 +97,44 @@ class DECPretrainer:
                 current_dataset = None
                 current_validation = None
         
-    def finetuning_autoencoder(
-        self
+    def finetune_autoencoder(
+        self,
+        train_dataset,
+        val_dataset = None,
+        silent = False,
+        eval_callback = None,
     ):
-        pass
+        ae_optimizer = SGD(params=self.autoencoder.parameters(), lr=self.config.lr, momentum=self.config.momentum)
+        ae_scheduler = StepLR(ae_optimizer, self.config.scheduler_step, gamma=self.config.scheduler_gamma)
+        train_autoencoder(
+            train_dataset,
+            self.autoencoder,
+            epochs=self.config.finetune_epochs,
+            batch_size=self.config.batch_size,
+            optimizer=ae_optimizer,
+            scheduler=ae_scheduler,
+            val_dataset=val_dataset,
+            corruption=self.config.dropout_rate,
+            silent=silent,
+            eval_epochs=self.config.eval_epochs,
+            eval_callback=eval_callback,
+            num_workers=self.config.num_workers,
+            device=self.config.device
+        )
+    
+    def train(
+        self,
+        train_dataset,
+        val_dataset = None
+    ):
+        self.pretrain_autoencoder(
+            train_dataset,
+            val_dataset
+        )
+        self.finetune_autoencoder(
+            train_dataset,
+            val_dataset
+        )
 
         
 import sys
@@ -117,37 +146,23 @@ seed_everything(42)
 config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
 
 ds_train = CommonDataset(
-    config.dataset_name,
-    config.data_dir,
-    True,
-    img_transform,
-    target_transform,
+    config.dataset_name, config.data_dir, True,
+    img_transform, target_transform,
 )
 
 ds_val = CommonDataset(
-    config.dataset_name,
-    config.data_dir,
-    False,
-    img_transform,
-    target_transform,
+    config.dataset_name, config.data_dir, False,
+    img_transform, target_transform,
 )
 
 trainer = DECPretrainer(config)
-trainer.pretrain_autoencoder(
+# trainer.pretrain_autoencoder(
+#     ds_train,
+#     val_dataset=ds_val,
+# )
+trainer.finetune_autoencoder(
     ds_train,
     val_dataset=ds_val,
-)
-ae_optimizer = SGD(params=trainer.autoencoder.parameters(), lr=0.1, momentum=0.9)
-train_autoencoder(
-    ds_train,
-    trainer.autoencoder,
-    val_dataset=ds_val,
-    epochs=config.finetune_epochs,
-    batch_size=config.batch_size,
-    optimizer=ae_optimizer,
-    scheduler=StepLR(ae_optimizer, 100, gamma=0.1),
-    corruption=0.2,
-    eval_callback=None,
 )
 
 # 保存autoencoder
