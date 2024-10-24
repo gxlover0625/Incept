@@ -22,23 +22,17 @@ class DECPretrainer:
     def __init__(self, config):
         self.config = config
         self.autoencoder = StackedDenoisingAutoEncoder(
-            config.dims, final_activation = None
+            config.dims, final_activation=None
         ).to(config.device)
 
     def pretrain_autoencoder(
         self,
         train_dataset,
-        batch_size: int,
-        optimizer: Callable[[torch.nn.Module], torch.optim.Optimizer],
-        scheduler: Optional[Callable[[torch.optim.Optimizer], Any]] = None,
-        val_dataset: Optional[torch.utils.data.Dataset] = None,
-        corruption: Optional[float] = None,
-        sampler: Optional[torch.utils.data.sampler.Sampler] = None,
-        silent: bool = False,
-        update_freq: Optional[int] = 1,
-        update_callback: Optional[Callable[[float, float], None]] = None,
-        num_workers = 0,
+        val_dataset = None,
+        silent = False,
+        eval_callback = None,
     ):
+        corruption = self.config.dropout_rate
         current_dataset = train_dataset
         current_validation = val_dataset
         number_of_subautoencoders = len(self.autoencoder.dimensions) - 1
@@ -58,34 +52,37 @@ class DECPretrainer:
                 else None,
                 corruption=nn.Dropout(corruption) if corruption is not None else None,
             )
-            sub_autoencoder = sub_autoencoder.to(self.config.device)
-            ae_optimizer = optimizer(sub_autoencoder)
-            ae_scheduler = scheduler(ae_optimizer) if scheduler is not None else scheduler
+            sub_autoencoder.to(self.config.device)
+            ae_optimizer = SGD(params=sub_autoencoder.parameters(), lr=self.config.lr, momentum=self.config.momentum)
+            ae_scheduler = StepLR(ae_optimizer, self.config.scheduler_step, gamma=self.config.scheduler_gamma)
 
             train_autoencoder(
                 current_dataset,
                 sub_autoencoder,
                 self.config.pretrain_epochs,
-                batch_size,
+                self.config.batch_size,
                 ae_optimizer,
+                scheduler=ae_scheduler,
                 val_dataset=current_validation,
                 corruption=None,  # already have dropout in the DAE
-                scheduler=ae_scheduler,
                 silent=silent,
+                eval_epochs=self.config.eval_epochs,
+                eval_callback=eval_callback,
                 num_workers=self.config.num_workers,
-                eval_epochs=update_freq,
-                eval_callback=update_callback,
                 device=self.config.device,
             )
 
             sub_autoencoder.copy_weights(encoder, decoder)
             if index != (number_of_subautoencoders - 1):
                 current_dataset = TensorDataset(
-                    self.predict(
+                    eval_autoencoder(
                         current_dataset,
                         sub_autoencoder,
-                        batch_size,
+                        self.config.batch_size,
+                        encode=True,
                         silent=silent,
+                        device=self.config.device,
+                        num_workers=self.config.num_workers
                     )
                 )
 
@@ -94,8 +91,11 @@ class DECPretrainer:
                         eval_autoencoder(
                             current_validation,
                             sub_autoencoder,
-                            batch_size,
+                            self.config.batch_size,
+                            encode=True,
                             silent=silent,
+                            device=self.config.device,
+                            num_workers=self.config.num_workers
                         )
                     )
             else:
@@ -136,10 +136,6 @@ trainer = DECPretrainer(config)
 trainer.pretrain_autoencoder(
     ds_train,
     val_dataset=ds_val,
-    batch_size=config.batch_size,
-    optimizer=lambda model: SGD(model.parameters(), lr=0.1, momentum=0.9),
-    scheduler=lambda x: StepLR(x, 100, gamma=0.1),
-    corruption=0.2,
 )
 ae_optimizer = SGD(params=trainer.autoencoder.parameters(), lr=0.1, momentum=0.9)
 train_autoencoder(

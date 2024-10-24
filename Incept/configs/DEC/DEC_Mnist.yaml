@@ -5,6 +5,7 @@ dims:
   - 500
   - 2000
   - 10
+dropout_rate: 0.2
 
 ### device
 device: cuda:0
@@ -21,6 +22,10 @@ output_dir: /data2/liangguanbao/opendeepclustering/saves/DEC/mnist
 pretrain_epochs: 300
 finetune_epochs: 500
 batch_size: 256
+lr: 0.1
+momentum: 0.9
+scheduler_step: 100
+scheduler_gamma: 0.1
 
 ### train
 
