@@ -127,10 +127,12 @@ class DECPretrainer:
         train_dataset,
         val_dataset = None
     ):
+        print("Pretraining stage.")
         self.pretrain_autoencoder(
             train_dataset,
             val_dataset
         )
+        print("Training stage.")
         self.finetune_autoencoder(
             train_dataset,
             val_dataset
@@ -160,23 +162,3 @@ ds_val = CommonDataset(
 
 trainer = DECPretrainer(config)
 trainer.train(ds_train, ds_val)
-# trainer.pretrain_autoencoder(
-#     ds_train,
-#     val_dataset=ds_val,
-# )
-# trainer.finetune_autoencoder(
-#     ds_train,
-#     val_dataset=ds_val,
-# )
-
-# 保存autoencoder
-# if not os.path.exists(config.output_dir):
-#     os.mkdir(config.output_dir)
-# torch.save(trainer.autoencoder.state_dict(), os.path.join(config.output_dir, "autoencoder.pth"))
-
-# 加载autoencoder
-# autoencoder = StackedDenoisingAutoEncoder(
-#     [28 * 28, 500, 500, 2000, 10], final_activation=None
-# )
-# autoencoder.load_state_dict(torch.load(os.path.join(config.output_dir, "autoencoder.pth")))
-# print(autoencoder)
