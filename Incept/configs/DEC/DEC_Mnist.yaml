@@ -15,7 +15,7 @@ dataset_name: mnist
 data_dir: /data2/liangguanbao/opendeepclustering/datasets
 
 ### output
-output_dir: /data2/liangguanbao/opendeepclustering/saves/mnist
+output_dir: /data2/liangguanbao/opendeepclustering/saves/DEC/mnist
 
 ### pretrain
 pretrain_epochs: 300

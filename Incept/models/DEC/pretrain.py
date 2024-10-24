@@ -16,7 +16,7 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple
 current_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_path)
 from model import DenoisingAutoencoder, StackedDenoisingAutoEncoder
-from dec_utils import img_transform, target_transform, train_autoencoder
+from dec_utils import img_transform, target_transform, train_autoencoder, eval_autoencoder
 
 class DECPretrainer:
     def __init__(self, config):
@@ -25,7 +25,7 @@ class DECPretrainer:
             config.dims, final_activation = None
         ).to(config.device)
 
-    def pretrain(
+    def pretrain_autoencoder(
         self,
         train_dataset,
         batch_size: int,
@@ -73,8 +73,8 @@ class DECPretrainer:
                 scheduler=ae_scheduler,
                 silent=silent,
                 num_workers=self.config.num_workers,
-                update_freq=update_freq,
-                update_callback=update_callback,
+                eval_epochs=update_freq,
+                eval_callback=update_callback,
                 device=self.config.device,
             )
 
@@ -91,7 +91,7 @@ class DECPretrainer:
 
                 if current_validation is not None:
                     current_validation = TensorDataset(
-                        self.predict(
+                        eval_autoencoder(
                             current_validation,
                             sub_autoencoder,
                             batch_size,
@@ -99,38 +99,15 @@ class DECPretrainer:
                         )
                     )
             else:
-                current_dataset = None  # minor optimisation on the last subautoencoder
+                current_dataset = None
                 current_validation = None
         
-    def predict(
-        self,
-        dataset: torch.utils.data.Dataset,
-        model: torch.nn.Module,
-        batch_size: int,
-        silent: bool = False,
-        encode: bool = True,
+    def finetuning_autoencoder(
+        self
     ):
-        dataloader = DataLoader(
-            dataset, batch_size=batch_size, pin_memory=False, shuffle=False
-        )
-        data_iterator = tqdm(dataloader, leave=False, unit="batch", disable=silent,)
-        features = []
-        if isinstance(model, torch.nn.Module):
-            model.eval()
-        for batch in data_iterator:
-            if isinstance(batch, tuple) or isinstance(batch, list) and len(batch) in [1, 2]:
-                batch = batch[0]
-                batch = batch.to(self.config.device, non_blocking=True)
-            batch = batch.squeeze(1).view(batch.size(0), -1)
-            if encode:
-                output = model.encode(batch)
-            else:
-                output = model(batch)
-            features.append(
-                output.detach().cpu()
-            )  # move to the CPU to prevent out of memory on the GPU
-        return torch.cat(features)
+        pass
 
+        
 import sys
 sys.path.append("/data2/liangguanbao/opendeepclustering/Incept")
 from Incept.utils import load_config, seed_everything
@@ -156,10 +133,7 @@ ds_val = CommonDataset(
 )
 
 trainer = DECPretrainer(config)
-# autoencoder = StackedDenoisingAutoEncoder(
-#     [28 * 28, 500, 500, 2000, 10], final_activation=None
-# ).to(config.device)
-trainer.pretrain(
+trainer.pretrain_autoencoder(
     ds_train,
     val_dataset=ds_val,
     batch_size=config.batch_size,
@@ -177,7 +151,7 @@ train_autoencoder(
     optimizer=ae_optimizer,
     scheduler=StepLR(ae_optimizer, 100, gamma=0.1),
     corruption=0.2,
-    update_callback=None,
+    eval_callback=None,
 )
 
 # 保存autoencoder

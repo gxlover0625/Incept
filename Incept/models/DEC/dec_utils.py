@@ -29,8 +29,8 @@ def train_autoencoder(
     val_dataset = None,
     corruption = None,
     silent = False,
-    update_freq = 1,
-    update_callback = None,
+    eval_epochs = 1,
+    eval_callback = None,
     num_workers = 0,
     device = "cuda",
 ):
@@ -92,14 +92,16 @@ def train_autoencoder(
                 epo=epoch, loss="%.6f" % loss_value, vloss="%.6f" % validation_loss_value,
             )
             
-        if update_freq is not None and epoch % update_freq == 0:
+        if eval_epochs is not None and epoch % eval_epochs == 0:
             if validation_loader is not None:
                 validation_output = eval_autoencoder(
                     val_dataset,
                     autoencoder,
                     batch_size,
-                    silent=True,
                     encode=False,
+                    silent=True,
+                    device=device,
+                    num_workers=num_workers
                 )
 
                 validation_inputs = []
@@ -127,8 +129,8 @@ def train_autoencoder(
                     epo=epoch, loss="%.6f" % loss_value, vloss="%.6f" % -1,
                 )
             
-            if update_callback is not None:
-                update_callback(
+            if eval_callback is not None:
+                eval_callback(
                     epoch,
                     optimizer.param_groups[0]["lr"],
                     loss_value,
@@ -142,14 +144,14 @@ def eval_autoencoder(
         encode = True,
         silent = False,
         device = "cuda",
+        num_workers = 0
     ):
         dataloader = DataLoader(
-            dataset, batch_size=batch_size, pin_memory=True, shuffle=False
+            dataset, batch_size=batch_size, pin_memory=True, shuffle=False, num_workers=num_workers
         )
         data_iterator = tqdm(dataloader, leave=False, unit="batch", disable=silent)
         features = []
-        if isinstance(autoencoder, torch.nn.Module):
-            autoencoder.eval()
+        autoencoder.eval()
         for batch in data_iterator:
             if isinstance(batch, tuple) or isinstance(batch, list) and len(batch) in [1, 2]:
                 batch = batch[0]
