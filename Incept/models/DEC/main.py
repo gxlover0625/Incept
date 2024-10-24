@@ -17,7 +17,7 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_path)
-from data_transform import CachedMNIST
+from backup.data_transform import CachedMNIST
 from model import DenoisingAutoencoder, DEC, StackedDenoisingAutoEncoder
 
 def cluster_accuracy(y_true, y_predicted, cluster_number: Optional[int] = None):
