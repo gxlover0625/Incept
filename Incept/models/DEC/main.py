@@ -11,15 +11,17 @@ from tqdm import tqdm
 
 from .dec_utils import img_transform, target_transform
 from .model import DEC, StackedDenoisingAutoEncoder, target_distribution
-from Incept.evaluation import acc
+from Incept.evaluation import Evaluator
 from Incept.utils.early_stopping import EarlyStopping
 
 class DECTrainer:
     def __init__(self, config, pretrained = True, strategy = "earlystop"):
         self.config = config
+        # dataset processing
         self.img_transform = img_transform
         self.target_transform = target_transform
 
+        # initialize the model
         autoencoder = StackedDenoisingAutoEncoder(
             self.config.dims, final_activation=None
         )
@@ -34,8 +36,13 @@ class DECTrainer:
             alpha=1
         ).to(self.config.device)
 
+        # initialize the optimizer
         self.optimizer = SGD(self.model.parameters(), lr=self.config.train_lr, momentum=self.config.train_momentum)
 
+        # evaluation
+        self.evaluator = Evaluator(metrics=["acc", "nmi", "ari"])
+
+        # stop strategy
         if strategy == "earlystop":
             self.early_stopper = EarlyStopping()
         else:
@@ -44,8 +51,6 @@ class DECTrainer:
     def train(
         self,
         dataset,
-        silent = False,
-        update_freq = 10,
     ):
         static_dataloader = DataLoader(
             dataset,
@@ -61,17 +66,12 @@ class DECTrainer:
             pin_memory=True,
             num_workers=self.config.num_workers,
         )
+
         data_iterator = tqdm(
             static_dataloader,
             leave=True,
             unit="batch",
-            postfix={
-                "epo": -1,
-                "acc": "%.4f" % 0.0,
-                "lss": "%.8f" % 0.0,
-                "dlb": "%.4f" % -1,
-            },
-            disable=silent,
+            desc="Initialize the cluster centers",
         )
         kmeans = KMeans(n_clusters=self.model.cluster_number, n_init=20)
         self.model.train()
@@ -89,7 +89,8 @@ class DECTrainer:
         predicted = kmeans.fit_predict(torch.cat(features).numpy())
         predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
         # _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
-        accuracy = acc(actual.cpu().numpy(), predicted)
+        results = self.evaluator.eval(actual.cpu().numpy(), predicted)
+        acc, nmi, ari = results["acc"], results["nmi"], results["ari"]
         cluster_centers = torch.tensor(
             kmeans.cluster_centers_, dtype=torch.float, requires_grad=True
         )
@@ -101,6 +102,7 @@ class DECTrainer:
 
         loss_function = nn.KLDivLoss(size_average=False)
         delta_label = None
+        # training
         for epoch in range(self.config.train_epochs):
             features = []
             data_iterator = tqdm(
@@ -108,14 +110,17 @@ class DECTrainer:
                 leave=True,
                 unit="batch",
                 postfix={
-                    "epo": epoch,
-                    "acc": "%.4f" % (accuracy or 0.0),
-                    "lss": "%.8f" % 0.0,
-                    "dlb": "%.4f" % (delta_label or 0.0),
+                    "epoch": epoch,
+                    "loss": "%.8f" % 0.0,
+                    "delta": "%.4f" % (delta_label or 0.0),
+                    "acc": "%.4f" % (acc or 0.0),
+                    "nmi": "%.4f" % (nmi or 0.0),
+                    "ari": "%.4f" % (ari or 0.0),
                 },
-                disable=silent,
+                disable=False,
             )
             self.model.train()
+            # batch training
             for index, batch in enumerate(data_iterator):
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
                     batch
@@ -127,29 +132,36 @@ class DECTrainer:
                 target = target_distribution(output).detach()
                 loss = loss_function(output.log(), target) / output.shape[0]
                 data_iterator.set_postfix(
-                    epo=epoch,
-                    acc="%.4f" % (accuracy or 0.0),
-                    lss="%.8f" % float(loss.item()),
-                    dlb="%.4f" % (delta_label or 0.0),
+                    epoch=epoch,
+                    loss="%.8f" % float(loss.item()),
+                    delta="%.4f" % (delta_label or 0.0),
+                    acc="%.4f" % (acc or 0.0),
+                    nmi="%.4f" % (nmi or 0.0),
+                    ari="%.4f" % (ari or 0.0),
                 )
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step(closure=None)
                 features.append(self.model.encoder(batch).detach().cpu())
-                if update_freq is not None and index % update_freq == 0:
-                    loss_value = float(loss.item())
-                    data_iterator.set_postfix(
-                        epo=epoch,
-                        acc="%.4f" % (accuracy or 0.0),
-                        lss="%.8f" % loss_value,
-                        dlb="%.4f" % (delta_label or 0.0),
-                    )
+                # if update_freq is not None and index % update_freq == 0:
+                #     loss_value = float(loss.item())
+                #     data_iterator.set_postfix(
+                #         epoch=epoch,
+                #         loss="%.8f" % loss_value,
+                #         acc="%.4f" % (accuracy or 0.0),
+                #         nmi="%.4f" % (nmi or 0.0),
+                #         ari="%.4f" % (ari or 0.0),
+                #         delta="%.4f" % (delta_label or 0.0),
+                #     )
+            
+            # validation for each epoch
             predicted, actual = self.predict(
                 dataset,
                 silent=True,
                 return_actual=True,
             )
             
+            # set the early stop
             if self.early_stopper is not None:
                 self.early_stopper(predicted, predicted_previous)
                 delta_label = self.early_stopper.delta_label
@@ -159,12 +171,15 @@ class DECTrainer:
                     break
 
             predicted_previous = predicted
-            accuracy = acc(actual.cpu().numpy(), predicted.cpu().numpy())
+            results = self.evaluator.eval(actual.cpu().numpy(), predicted.cpu().numpy())
+            acc, nmi, ari = results["acc"], results["nmi"], results["ari"]
             data_iterator.set_postfix(
-                epo=epoch,
-                acc="%.4f" % (accuracy or 0.0),
-                lss="%.8f" % 0.0,
-                dlb="%.4f" % (delta_label or 0.0),
+                epoch=epoch,
+                loss="%.8f" % float(loss.item()),
+                delta="%.4f" % (delta_label or 0.0),
+                acc="%.4f" % (acc or 0.0),
+                nmi="%.4f" % (nmi or 0.0),
+                ari="%.4f" % (ari or 0.0),
             )
 
     def predict(
