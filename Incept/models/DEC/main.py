@@ -10,14 +10,13 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-# current_path = os.path.dirname(os.path.abspath(__file__))
-# sys.path.append(current_path)
 from .dec_utils import img_transform, target_transform
 from .model import DEC, StackedDenoisingAutoEncoder, target_distribution
 from Incept.evaluation import acc
+from Incept.utils.early_stopping import EarlyStopping
 
 class DECTrainer:
-    def __init__(self, config, pretrained = True):
+    def __init__(self, config, pretrained = True, strategy = "earlystop"):
         self.config = config
         self.img_transform = img_transform
         self.target_transform = target_transform
@@ -37,6 +36,11 @@ class DECTrainer:
         ).to(self.config.device)
 
         self.optimizer = SGD(self.model.parameters(), lr=self.config.train_lr, momentum=self.config.train_momentum)
+
+        if strategy == "earlystop":
+            self.early_stopper = EarlyStopping()
+        else:
+            self.early_stopper = None
     
     def train(
         self,
@@ -96,6 +100,7 @@ class DECTrainer:
         with torch.no_grad():
             # initialise the cluster centers
             self.model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
+
         loss_function = nn.KLDivLoss(size_average=False)
         delta_label = None
         for epoch in range(self.config.train_epochs):
@@ -146,16 +151,15 @@ class DECTrainer:
                 silent=True,
                 return_actual=True,
             )
-            delta_label = (
-                float((predicted != predicted_previous).float().sum().item())
-                / predicted_previous.shape[0]
-            )
-            if stopping_delta is not None and delta_label < stopping_delta:
-                print(
-                    'Early stopping as label delta "%1.5f" less than "%1.5f".'
-                    % (delta_label, stopping_delta)
-                )
-                break
+            
+            if self.early_stopper is not None:
+                self.early_stopper(predicted, predicted_previous)
+                delta_label = self.early_stopper.delta_label
+
+                if self.early_stopper.is_early_stop:
+                    print("Early stopping triggered.")
+                    break
+
             predicted_previous = predicted
             accuracy = acc(actual.cpu().numpy(), predicted.cpu().numpy())
             data_iterator.set_postfix(
