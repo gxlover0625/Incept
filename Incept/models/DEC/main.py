@@ -12,12 +12,16 @@ from tqdm import tqdm
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_path)
-from model import DEC, StackedDenoisingAutoEncoder, target_distribution
 from dec_utils import img_transform, target_transform
+from model import DEC, StackedDenoisingAutoEncoder, target_distribution
+from Incept.evaluation import acc
 
 class DECTrainer:
     def __init__(self, config, pretrain = True):
         self.config = config
+        self.img_transform = img_transform
+        self.target_transform = target_transform
+
         autoencoder = StackedDenoisingAutoEncoder(
             self.config.dims, final_activation=None
         )
@@ -195,26 +199,26 @@ class DECTrainer:
             return torch.cat(features).max(1)[1]
 
         
-import sys
-sys.path.append("/data2/liangguanbao/opendeepclustering/Incept")
-from Incept.evaluation import acc
-from Incept.utils import load_config, seed_everything
-from Incept.utils.data import CommonDataset
+# import sys
+# sys.path.append("/data2/liangguanbao/opendeepclustering/Incept")
+# from Incept.evaluation import acc
+# from Incept.utils import load_config, seed_everything
+# from Incept.utils.data import CommonDataset
 
-seed_everything(42)
-config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
+# seed_everything(42)
+# config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
 
-ds_train = CommonDataset(
-    config.dataset_name, config.data_dir, True,
-    img_transform, target_transform,
-)
+# ds_train = CommonDataset(
+#     config.dataset_name, config.data_dir, True,
+#     img_transform, target_transform,
+# )
 
-trainer = DECTrainer(config)
-# dec_optimizer = SGD(trainer.model.parameters(), lr=0.01, momentum=0.9)
-trainer.train(
-    dataset=ds_train,
-    stopping_delta=0.000001,
-)
+# trainer = DECTrainer(config)
+# # dec_optimizer = SGD(trainer.model.parameters(), lr=0.01, momentum=0.9)
+# trainer.train(
+#     dataset=ds_train,
+#     stopping_delta=0.000001,
+# )
 
 # predicted, actual = trainer.predict(
 #     ds_train, model, 1024, silent=True, return_actual=True, cuda=config.device

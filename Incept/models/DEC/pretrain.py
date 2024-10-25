@@ -10,16 +10,19 @@ from torch.utils.tensorboard import SummaryWriter
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_path)
-from model import DenoisingAutoencoder, StackedDenoisingAutoEncoder
 from dec_utils import img_transform, target_transform, train_autoencoder, eval_autoencoder
+from model import DenoisingAutoencoder, StackedDenoisingAutoEncoder
 
 class DECPretrainer:
     def __init__(self, config):
         self.config = config
+        self.img_transform = img_transform
+        self.target_transform = target_transform
+        
         self.autoencoder = StackedDenoisingAutoEncoder(
             config.dims, final_activation=None
         ).to(config.device)
-
+        
     def pretrain_autoencoder(
         self,
         train_dataset,
@@ -145,31 +148,31 @@ class DECPretrainer:
         torch.save(self.autoencoder.state_dict(), os.path.join(self.config.output_dir, "autoencoder.pth"))
 
         
-import sys
-sys.path.append("/data2/liangguanbao/opendeepclustering/Incept")
-from Incept.utils import load_config, seed_everything
-from Incept.utils.data import CommonDataset
+# import sys
+# sys.path.append("/data2/liangguanbao/opendeepclustering/Incept")
+# from Incept.utils import load_config, seed_everything
+# from Incept.utils.data import CommonDataset
 
-seed_everything(42)
-config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
+# seed_everything(42)
+# config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
 
-writer = SummaryWriter(log_dir="/data2/liangguanbao/opendeepclustering/saves/DEC/mnist")
-def training_callback(epoch, lr, loss, validation_loss):
-    writer.add_scalars(
-        "data/autoencoder",
-        {"lr": lr, "loss": loss, "validation_loss": validation_loss,},
-        epoch,
-    )
+# writer = SummaryWriter(log_dir="/data2/liangguanbao/opendeepclustering/saves/DEC/mnist")
+# def training_callback(epoch, lr, loss, validation_loss):
+#     writer.add_scalars(
+#         "data/autoencoder",
+#         {"lr": lr, "loss": loss, "validation_loss": validation_loss,},
+#         epoch,
+#     )
 
-ds_train = CommonDataset(
-    config.dataset_name, config.data_dir, True,
-    img_transform, target_transform,
-)
+# ds_train = CommonDataset(
+#     config.dataset_name, config.data_dir, True,
+#     img_transform, target_transform,
+# )
 
-ds_val = CommonDataset(
-    config.dataset_name, config.data_dir, False,
-    img_transform, target_transform,
-)
+# ds_val = CommonDataset(
+#     config.dataset_name, config.data_dir, False,
+#     img_transform, target_transform,
+# )
 
-trainer = DECPretrainer(config)
-trainer.train(ds_train, ds_val, training_callback)
+# trainer = DECPretrainer(config)
+# trainer.train(ds_train, ds_val, training_callback)
