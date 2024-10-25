@@ -138,30 +138,30 @@ def train_autoencoder(
                 )
 
 def eval_autoencoder(
-        dataset,
-        autoencoder,
-        batch_size,
-        encode = True,
-        silent = False,
-        device = "cuda",
-        num_workers = 0
-    ):
-        dataloader = DataLoader(
-            dataset, batch_size=batch_size, pin_memory=True, shuffle=False, num_workers=num_workers
+    dataset,
+    autoencoder,
+    batch_size,
+    encode = True,
+    silent = False,
+    device = "cuda",
+    num_workers = 0
+):
+    dataloader = DataLoader(
+        dataset, batch_size=batch_size, pin_memory=True, shuffle=False, num_workers=num_workers
+    )
+    data_iterator = tqdm(dataloader, leave=False, unit="batch", disable=silent)
+    features = []
+    autoencoder.eval()
+    for batch in data_iterator:
+        if isinstance(batch, tuple) or isinstance(batch, list) and len(batch) in [1, 2]:
+            batch = batch[0]
+            batch = batch.to(device, non_blocking=True)
+        batch = batch.squeeze(1).view(batch.size(0), -1)
+        if encode:
+            output = autoencoder.encode(batch)
+        else:
+            output = autoencoder(batch)
+        features.append(
+            output.detach().cpu()
         )
-        data_iterator = tqdm(dataloader, leave=False, unit="batch", disable=silent)
-        features = []
-        autoencoder.eval()
-        for batch in data_iterator:
-            if isinstance(batch, tuple) or isinstance(batch, list) and len(batch) in [1, 2]:
-                batch = batch[0]
-                batch = batch.to(device, non_blocking=True)
-            batch = batch.squeeze(1).view(batch.size(0), -1)
-            if encode:
-                output = autoencoder.encode(batch)
-            else:
-                output = autoencoder(batch)
-            features.append(
-                output.detach().cpu()
-            )
-        return torch.cat(features)
+    return torch.cat(features)
