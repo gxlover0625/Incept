@@ -15,15 +15,13 @@ sys.path.append(current_path)
 from model import DEC, StackedDenoisingAutoEncoder, target_distribution
 from dec_utils import img_transform, target_transform
 
-from tqdm import tqdm
-
 class DECTrainer:
-    def __init__(self, config, testing_mode = False):
+    def __init__(self, config, pretrain = True):
         self.config = config
         autoencoder = StackedDenoisingAutoEncoder(
             self.config.dims, final_activation=None
         )
-        if not testing_mode:
+        if pretrain:
             model_dir = self.config.output_dir
             autoencoder.load_state_dict(torch.load(os.path.join(model_dir, "autoencoder.pth")))
 
