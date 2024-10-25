@@ -13,15 +13,16 @@ from .dec_utils import img_transform, target_transform
 from .model import DEC, StackedDenoisingAutoEncoder, target_distribution
 from Incept.evaluation import Evaluator
 from Incept.utils.early_stopping import EarlyStopping
+from Incept.utils.logger import BasicLogger
 
 class DECTrainer:
-    def __init__(self, config, pretrained = True, strategy = "earlystop"):
+    def __init__(self, config, pretrained = True, strategy = "earlystop", logger="basic"):
         self.config = config
         # dataset processing
         self.img_transform = img_transform
         self.target_transform = target_transform
 
-        # initialize the model
+        # model
         autoencoder = StackedDenoisingAutoEncoder(
             self.config.dims, final_activation=None
         )
@@ -36,9 +37,10 @@ class DECTrainer:
             alpha=1
         ).to(self.config.device)
 
-        # initialize the optimizer
+        # optimizer
         self.optimizer = SGD(self.model.parameters(), lr=self.config.train_lr, momentum=self.config.train_momentum)
 
+        ### Additional Components
         # evaluation
         self.evaluator = Evaluator(metrics=["acc", "nmi", "ari"])
 
@@ -47,6 +49,12 @@ class DECTrainer:
             self.early_stopper = EarlyStopping()
         else:
             self.early_stopper = None
+        
+        # log
+        if logger == "basic":
+            self.logger = BasicLogger(backends=["json", "tensorboard"], log_dir=self.config.output_dir)
+        else:
+            self.logger = None
     
     def train(
         self,
@@ -143,23 +151,14 @@ class DECTrainer:
                 loss.backward()
                 self.optimizer.step(closure=None)
                 features.append(self.model.encoder(batch).detach().cpu())
-                # if update_freq is not None and index % update_freq == 0:
-                #     loss_value = float(loss.item())
-                #     data_iterator.set_postfix(
-                #         epoch=epoch,
-                #         loss="%.8f" % loss_value,
-                #         acc="%.4f" % (accuracy or 0.0),
-                #         nmi="%.4f" % (nmi or 0.0),
-                #         ari="%.4f" % (ari or 0.0),
-                #         delta="%.4f" % (delta_label or 0.0),
-                #     )
             
             # validation for each epoch
             predicted, actual = self.predict(
                 dataset,
-                silent=True,
                 return_actual=True,
             )
+            results = self.evaluator.eval(actual.cpu().numpy(), predicted.cpu().numpy())
+            acc, nmi, ari = results["acc"], results["nmi"], results["ari"]
             
             # set the early stop
             if self.early_stopper is not None:
@@ -168,11 +167,16 @@ class DECTrainer:
 
                 if self.early_stopper.is_early_stop:
                     print("Early stopping triggered.")
+                    self.logger.update(
+                        epoch=epoch,
+                        acc=acc,
+                        nmi=nmi,
+                        ari=ari,
+                        model=self.model,
+                    )
                     break
 
             predicted_previous = predicted
-            results = self.evaluator.eval(actual.cpu().numpy(), predicted.cpu().numpy())
-            acc, nmi, ari = results["acc"], results["nmi"], results["ari"]
             data_iterator.set_postfix(
                 epoch=epoch,
                 loss="%.8f" % float(loss.item()),
@@ -182,17 +186,36 @@ class DECTrainer:
                 ari="%.4f" % (ari or 0.0),
             )
 
+            if self.logger is not None:
+                self.logger.log(
+                    epoch=epoch,
+                    loss=float(loss.item()),
+                    delta_label=delta_label,
+                    acc=acc,
+                    nmi=nmi,
+                    ari=ari,
+                )
+                self.logger.update(
+                    epoch=epoch,
+                    acc=acc,
+                    nmi=nmi,
+                    ari=ari,
+                    model=self.model,
+                )
+        
+        if self.logger:
+            self.logger.summary()
+
     def predict(
         self,
         dataset,
-        silent = False,
         return_actual = False,
     ):
         dataloader = DataLoader(
             dataset, batch_size=self.config.eval_batch_size, shuffle=False,
             pin_memory=True, num_workers=self.config.num_workers,
         )
-        data_iterator = tqdm(dataloader, leave=True, unit="batch", disable=silent)
+        data_iterator = tqdm(dataloader, leave=True, unit="batch", disable=True)
         features = []
         actual = []
         self.model.eval()
@@ -214,33 +237,3 @@ class DECTrainer:
             return torch.cat(features).max(1)[1], torch.cat(actual).long()
         else:
             return torch.cat(features).max(1)[1]
-
-        
-# import sys
-# sys.path.append("/data2/liangguanbao/opendeepclustering/Incept")
-# from Incept.evaluation import acc
-# from Incept.utils import load_config, seed_everything
-# from Incept.utils.data import CommonDataset
-
-# seed_everything(42)
-# config = load_config("/data2/liangguanbao/opendeepclustering/Incept/Incept/configs/DEC/DEC_Mnist.yaml")
-
-# ds_train = CommonDataset(
-#     config.dataset_name, config.data_dir, True,
-#     img_transform, target_transform,
-# )
-
-# trainer = DECTrainer(config)
-# # dec_optimizer = SGD(trainer.model.parameters(), lr=0.01, momentum=0.9)
-# trainer.train(
-#     dataset=ds_train,
-#     stopping_delta=0.000001,
-# )
-
-# predicted, actual = trainer.predict(
-#     ds_train, model, 1024, silent=True, return_actual=True, cuda=config.device
-# )
-# actual = actual.cpu().numpy()
-# predicted = predicted.cpu().numpy()
-# reassignment, accuracy = cluster_accuracy(actual, predicted)
-# print("Final DEC accuracy: %s" % accuracy)
