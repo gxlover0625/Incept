@@ -10,10 +10,10 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_path)
-from dec_utils import img_transform, target_transform
-from model import DEC, StackedDenoisingAutoEncoder, target_distribution
+# current_path = os.path.dirname(os.path.abspath(__file__))
+# sys.path.append(current_path)
+from .dec_utils import img_transform, target_transform
+from .model import DEC, StackedDenoisingAutoEncoder, target_distribution
 from Incept.evaluation import acc
 
 class DECTrainer:
@@ -41,7 +41,7 @@ class DECTrainer:
     def train(
         self,
         dataset,
-        stopping_delta,
+        stopping_delta = 1e-6,
         silent = False,
         update_freq = 10,
     ):

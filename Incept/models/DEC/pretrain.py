@@ -8,10 +8,10 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import TensorDataset
 from torch.utils.tensorboard import SummaryWriter
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_path)
-from dec_utils import img_transform, target_transform, train_autoencoder, eval_autoencoder
-from model import DenoisingAutoencoder, StackedDenoisingAutoEncoder
+# current_path = os.path.dirname(os.path.abspath(__file__))
+# sys.path.append(current_path)
+from .dec_utils import img_transform, target_transform, train_autoencoder, eval_autoencoder
+from .model import DenoisingAutoencoder, StackedDenoisingAutoEncoder
 
 class DECPretrainer:
     def __init__(self, config):
