@@ -7,7 +7,6 @@ import torch.nn as nn
 from sklearn.cluster import KMeans
 from torch.optim import SGD
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from .dec_utils import img_transform, target_transform
@@ -45,7 +44,6 @@ class DECTrainer:
     def train(
         self,
         dataset,
-        stopping_delta = 1e-6,
         silent = False,
         update_freq = 10,
     ):
