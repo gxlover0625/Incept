@@ -1,4 +1,7 @@
 ### model
+# assert dims[0] == Channels * H * W
+# assert hidden_dim == dims[-1]
+method: DEC
 dims:
   - 784
   - 500
@@ -6,7 +9,6 @@ dims:
   - 2000
   - 10
 dropout_rate: 0.2
-# assert hidden_dim == dims[-1]
 hidden_dim: 10
 
 ### device

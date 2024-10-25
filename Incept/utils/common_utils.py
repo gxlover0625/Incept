@@ -1,4 +1,3 @@
-import argparse
 import easydict
 import numpy as np
 import os

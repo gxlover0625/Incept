@@ -1,53 +1,21 @@
 import numpy as np
 import os
-from scipy.optimize import linear_sum_assignment
 import sys
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from sklearn.cluster import KMeans
 from torch.optim import SGD
-from torch.utils.data import Dataset, DataLoader, TensorDataset
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from typing import Any, Callable, Iterable, List, Optional, Tuple
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_path)
 from model import DEC, StackedDenoisingAutoEncoder, target_distribution
 from dec_utils import img_transform, target_transform
 
-import numpy as np
-from sklearn.cluster import KMeans
-import torch
-import torch.nn as nn
-from torch.utils.data.dataloader import DataLoader, default_collate
-from typing import Tuple, Callable, Optional, Union
 from tqdm import tqdm
-
-def cluster_accuracy(y_true, y_predicted, cluster_number: Optional[int] = None):
-    """
-    Calculate clustering accuracy after using the linear_sum_assignment function in SciPy to
-    determine reassignments.
-
-    :param y_true: list of true cluster numbers, an integer array 0-indexed
-    :param y_predicted: list  of predicted cluster numbers, an integer array 0-indexed
-    :param cluster_number: number of clusters, if None then calculated from input
-    :return: reassignment dictionary, clustering accuracy
-    """
-    if cluster_number is None:
-        cluster_number = (
-            max(y_predicted.max(), y_true.max()) + 1
-        )  # assume labels are 0-indexed
-    count_matrix = np.zeros((cluster_number, cluster_number), dtype=np.int64)
-    for i in range(y_predicted.size):
-        count_matrix[y_predicted[i], y_true[i]] += 1
-
-    row_ind, col_ind = linear_sum_assignment(count_matrix.max() - count_matrix)
-    reassignment = dict(zip(row_ind, col_ind))
-    accuracy = count_matrix[row_ind, col_ind].sum() / y_predicted.size
-    return reassignment, accuracy
 
 class DECTrainer:
     def __init__(self, config, testing_mode = False):
