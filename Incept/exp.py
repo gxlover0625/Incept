@@ -9,6 +9,5 @@ class ExpManager:
             self.val_dataset = val_dataset
     
     def run(self):
-        seed_everything()
-        self.trainer.train(self.train_dataset)
-        # self.trainer.train(self.train_dataset, self.val_dataset)
+        # self.trainer.train(self.train_dataset)
+        self.trainer.train(self.train_dataset, self.val_dataset)
