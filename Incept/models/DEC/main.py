@@ -17,7 +17,7 @@ from .model import DEC, StackedDenoisingAutoEncoder, target_distribution
 from Incept.evaluation import acc
 
 class DECTrainer:
-    def __init__(self, config, pretrain = True):
+    def __init__(self, config, pretrained = True):
         self.config = config
         self.img_transform = img_transform
         self.target_transform = target_transform
@@ -25,7 +25,7 @@ class DECTrainer:
         autoencoder = StackedDenoisingAutoEncoder(
             self.config.dims, final_activation=None
         )
-        if pretrain:
+        if pretrained:
             model_dir = self.config.output_dir
             autoencoder.load_state_dict(torch.load(os.path.join(model_dir, "autoencoder.pth")))
 

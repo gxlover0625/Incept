@@ -1,0 +1,45 @@
+### model
+# assert dims[0] == Channels * H * W
+# assert hidden_dim == dims[-1]
+method: DEC
+dims:
+  - 3072
+  - 500
+  - 500
+  - 2000
+  - 10
+dropout_rate: 0.2
+hidden_dim: 10
+
+### device
+device: cuda:0
+num_workers: 16
+
+### dataset
+dataset_name: CIFAR10
+data_dir: /data2/liangguanbao/opendeepclustering/datasets
+cluster_num: 10
+
+### output
+output_dir: /data2/liangguanbao/opendeepclustering/saves/DEC/CIFAR10
+
+### pretrain
+### In pretraining phase, we set all the batch size to 256
+pretrain_epochs: 300
+finetune_epochs: 500
+batch_size: 256
+lr: 0.1
+momentum: 0.9
+scheduler_step: 100
+scheduler_gamma: 0.1
+
+### train
+train_epochs: 100
+train_batch_size: 256
+train_lr: 0.01
+train_momentum: 0.9
+stopping_delta: 0.000001
+
+### eval
+eval_epochs: 1
+eval_batch_size: 1024
