@@ -3,15 +3,16 @@ from Incept.utils.data import CommonDataset
 from Incept.utils import seed_everything
 from Incept.exp import ExpManager
 
-# step 0, for testing purpose to set the seed
-seed_everything(42)
+pretrain_mode = False
 
 # step 1, load config
 config = Incept.configs.load_exp_config("DEC", "MNIST")
 
 # step 2, load trainer
-trainer = Incept.models.DECPretrainer(config)
-# trainer = Incept.models.DECTrainer(config, pretrained = True)
+if pretrain_mode:
+    trainer = Incept.models.DECPretrainer(config)
+else:
+    trainer = Incept.models.DECTrainer(config, pretrained = True)
 
 # step 3, load dataset
 train_dataset = CommonDataset(
@@ -25,4 +26,7 @@ val_dataset = CommonDataset(
 
 # step 4, run experiment
 exp = ExpManager(config, trainer, train_dataset, val_dataset)
-exp.run()
+if pretrain_mode:
+    exp.run(pretrain=True)
+else:
+    exp.run(pretrain=False)

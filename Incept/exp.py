@@ -8,6 +8,12 @@ class ExpManager:
         if val_dataset is not None:
             self.val_dataset = val_dataset
     
-    def run(self):
+    def run(self, n_runs = 1, pretrain = True):
+        seed_everything()
         # self.trainer.train(self.train_dataset)
-        self.trainer.train(self.train_dataset, self.val_dataset)
+        self.trainer.setup()
+
+        if pretrain:
+            self.trainer.train(self.train_dataset, self.val_dataset)
+        else:
+            self.trainer.train(self.train_dataset)

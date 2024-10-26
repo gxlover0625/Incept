@@ -18,15 +18,33 @@ from Incept.utils.logger import BasicLogger
 class DECTrainer:
     def __init__(self, config, pretrained = True, strategy = "earlystop", logger="basic"):
         self.config = config
+        self.pretrained = pretrained
+
         # dataset processing
         self.img_transform = img_transform
         self.target_transform = target_transform
 
+        # evaluation component
+        self.evaluator = Evaluator(metrics=["acc", "nmi", "ari"])
+
+        # stop strategy
+        if strategy == "earlystop":
+            self.early_stopper = EarlyStopping()
+        else:
+            self.early_stopper = None
+        
+        # log component
+        if logger == "basic":
+            self.logger = BasicLogger(backends=["json", "tensorboard"], log_dir=self.config.output_dir)
+        else:
+            self.logger = None
+    
+    def setup(self):
         # model
         autoencoder = StackedDenoisingAutoEncoder(
             self.config.dims, final_activation=None
         )
-        if pretrained:
+        if self.pretrained:
             model_dir = self.config.output_dir
             autoencoder.load_state_dict(torch.load(os.path.join(model_dir, "autoencoder.pth")))
 
@@ -39,23 +57,7 @@ class DECTrainer:
 
         # optimizer
         self.optimizer = SGD(self.model.parameters(), lr=self.config.train_lr, momentum=self.config.train_momentum)
-
-        ### Additional Components
-        # evaluation
-        self.evaluator = Evaluator(metrics=["acc", "nmi", "ari"])
-
-        # stop strategy
-        if strategy == "earlystop":
-            self.early_stopper = EarlyStopping()
-        else:
-            self.early_stopper = None
         
-        # log
-        if logger == "basic":
-            self.logger = BasicLogger(backends=["json", "tensorboard"], log_dir=self.config.output_dir)
-        else:
-            self.logger = None
-    
     def train(
         self,
         dataset,

@@ -17,9 +17,10 @@ class DECPretrainer:
         self.img_transform = img_transform
         self.target_transform = target_transform
         
+    def setup(self):
         self.autoencoder = StackedDenoisingAutoEncoder(
-            config.dims, final_activation=None
-        ).to(config.device)
+            self.config.dims, final_activation=None
+        ).to(self.config.device)
         
     def pretrain_autoencoder(
         self,
