@@ -169,13 +169,22 @@ class DECTrainer:
 
                 if self.early_stopper.is_early_stop:
                     print("Early stopping triggered.")
-                    self.logger.update(
-                        epoch=epoch,
-                        acc=acc,
-                        nmi=nmi,
-                        ari=ari,
-                        model=self.model,
-                    )
+                    if self.logger is not None:
+                        self.logger.log(
+                            epoch=epoch,
+                            loss=float(loss.item()),
+                            delta_label=delta_label,
+                            acc=acc,
+                            nmi=nmi,
+                            ari=ari,
+                        )
+                        self.logger.update(
+                            epoch=epoch,
+                            acc=acc,
+                            nmi=nmi,
+                            ari=ari,
+                            model=self.model,
+                        )
                     break
 
             predicted_previous = predicted

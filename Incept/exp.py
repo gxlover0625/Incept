@@ -9,7 +9,7 @@ class ExpManager:
             self.val_dataset = val_dataset
     
     def run(self, n_runs = 1, pretrain = True):
-        seed_everything()
+        # seed_everything()
         # self.trainer.train(self.train_dataset)
         self.trainer.setup()
 

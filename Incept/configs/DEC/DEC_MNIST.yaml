@@ -21,7 +21,7 @@ data_dir: /data2/liangguanbao/opendeepclustering/datasets
 cluster_num: 10
 
 ### output
-output_dir: /data2/liangguanbao/opendeepclustering/saves/DEC/MNIST
+output_dir: /data2/liangguanbao/opendeepclustering/saves/DEC/MNIST/2
 
 ### pretrain
 ### In pretraining phase, we set all the batch size to 256

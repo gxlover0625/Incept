@@ -5,10 +5,10 @@ from Incept.exp import ExpManager
 
 # step 0, set the environment
 seed_everything()
-pretrain_mode = False
+pretrain_mode = True
 
 # step 1, load config
-config = Incept.configs.load_exp_config("DEC", "MNIST")
+config = Incept.configs.load_exp_config("DEC", "CIFAR10")
 
 # step 2, load trainer
 if pretrain_mode:
