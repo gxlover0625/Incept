@@ -3,9 +3,10 @@ from Incept.utils.data import CommonDataset
 from Incept.utils import seed_everything
 from Incept.exp import ExpManager
 
-pretrain_mode = False
+pretrain_mode = True
 
 # step 1, load config
+
 config = Incept.configs.load_exp_config("DEC", "MNIST")
 
 # step 2, load trainer
