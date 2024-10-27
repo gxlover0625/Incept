@@ -5,7 +5,7 @@ from Incept.exp import ExpManager
 
 # step 0, set the environment
 seed_everything()
-pretrain_mode = True
+pretrain_mode = False
 
 # step 1, load config
 config = Incept.configs.load_exp_config("DEC", "CIFAR10")
