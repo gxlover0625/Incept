@@ -119,7 +119,5 @@ nohup python -u models/Simultaneous/DEC/pretrain.py \
 ## Contact
 If you have any questions or suggestions while using our code, please feel free to contact us via the following ways. Our response will be sent to you quickly.
 
-:point_right: Submit an issue in the GitHub repository with [link](https://github.com/zhoushengisnoob/OpenDeepClustering/issues).
-
 ## Star History
 ![Star History Chart](https://api.star-history.com/svg?repos=zhoushengisnoob/OpenDeepClustering&type=Date)
