@@ -1,23 +1,30 @@
-# general
-seed: 42
-workers: 8
-dataset_dir: /data2/liangguanbao/opendeepclustering/datasets
-
-# train options
-batch_size: 256
-image_size: 224
-start_epoch: 0
-epochs: 1000
-dataset: "CIFAR-10" # CIFAR-10 / CIFAR-100 / STL-10 / ImageNet-10 / ImageNet-dogs / tiny-ImageNet
-
-# model options
-resnet: "ResNet34" # ResNet18 / ResNet34 / ResNet50
+### model
+method: CC
 feature_dim: 128
-model_path: "save/CIFAR-10"
-reload: False
-
-# loss options
-learning_rate: 0.0003
-weight_decay: 0.
+resnet: "ResNet34"
+image_size: 224
 instance_temperature: 0.5
 cluster_temperature: 1.0
+
+### device
+device: cuda:0
+num_workers: 8
+
+### dataset
+dataset_name: CIFAR10
+data_dir: /data2/liangguanbao/opendeepclustering/datasets
+cluster_num: 10
+
+### output
+output_dir: /data2/liangguanbao/opendeepclustering/saves/CC/CIFAR10
+
+### train
+epochs: 1000
+batch_size: 256
+lr: 0.0003
+weight_decay: 0.
+stopping_delta: 0.000001
+
+### eval
+eval_epochs: 1
+eval_batch_size: 256
