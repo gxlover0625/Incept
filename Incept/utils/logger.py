@@ -1,22 +1,25 @@
 import json
 import os
 import torch
+
 from collections import defaultdict
 from torch.utils.tensorboard import SummaryWriter
 
 class BasicLogger:
     def __init__(self, backends = ["json", "tensorboard"], log_dir = None):
+        self.log_dir = log_dir
+
+        # initialize logger
         if "json" in backends:
             self.json_data = defaultdict(dict)
         else:
             self.json_data = None
+
         if "tensorboard" in backends:
             self.writer = SummaryWriter(log_dir=log_dir)
         else:
             self.writer = None
-        
-        self.log_dir = log_dir
-        
+          
         self.best_acc, self.best_nmi, self.best_ari = -1, -1, -1
         self.best_epoch = -1
         self.best_model = None

@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from sklearn.metrics import accuracy_score, normalized_mutual_info_score, adjusted_mutual_info_score
+from sklearn.metrics import accuracy_score, normalized_mutual_info_score, adjusted_rand_score
 
 def best_mapping(true_labels, pred_labels):
     true_label_set = np.unique(true_labels)
@@ -30,7 +30,7 @@ def nmi(true_labels, pred_labels):
     return normalized_mutual_info_score(true_labels, pred_labels)
 
 def ari(true_labels, pred_labels):
-    return adjusted_mutual_info_score(true_labels, pred_labels)
+    return adjusted_rand_score(true_labels, pred_labels)
 
 class Evaluator:
     def __init__(self, metrics = ["acc", "nmi", "ari"]):
