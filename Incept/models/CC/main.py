@@ -139,9 +139,9 @@ class CCTrainer:
                     loss=loss.item(), delta_label=delta_label, acc=acc, nmi=nmi, ari=ari
                 )
 
-                # if step % 50 == 0:
-                #     print(
-                #         f"Step [{step}]\t loss_instance: {loss_instance.item()}\t loss_cluster: {loss_cluster.item()}")
+                if step % 50 == 0:
+                    print(
+                        f"Step [{step}]\t loss_instance: {loss_instance.item()}\t loss_cluster: {loss_cluster.item()}")
             
             # step4, evaluation
             if epoch % config.eval_epochs == 0:
