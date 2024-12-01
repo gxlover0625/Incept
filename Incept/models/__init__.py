@@ -1,2 +1,2 @@
-from .DEC.pretrain import DECPretrainer
-from .DEC.main import DECTrainer
+from .DEC import DECPretrainer, DECTrainer
+from .CC import CCTrainer

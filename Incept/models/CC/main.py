@@ -68,6 +68,7 @@ class CCTrainer:
         iterator.set_postfix(update_info)
     
     def log_update(self, *args, **kwargs):
+        config = self.config
         epoch = kwargs["epoch"]
         for key, value in kwargs.items():
             if key != "epoch":
@@ -89,6 +90,7 @@ class CCTrainer:
             torch.save(self.model.state_dict(), os.path.join(config.output_dir, "best_model.pth"))
     
     def summary(self):
+        config = self.config
         summary_data = {
             "best_epoch": self.best_epoch,
             "best_acc": self.best_acc,
