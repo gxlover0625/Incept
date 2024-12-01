@@ -104,6 +104,7 @@ nohup python -u models/Simultaneous/DEC/pretrain.py \
 |Model |Backbone | MNIST | STL10  | CIFAR10  |
 |------|---------|-------|--------|----------|
 | DEC  |    /    | 85.96 |        |   23.93  |
+| CC   |    /    |       |        |   75.16  |
 
 ## Citation
 :smiley:Our paper is posted on arXiv: [A comprehensive survey on deep clustering: Taxonomy, challenges, and future directions](https://arxiv.org/abs/2206.07579). 
