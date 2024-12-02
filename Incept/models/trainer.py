@@ -6,15 +6,22 @@ from collections import defaultdict
 from torch.utils.tensorboard import SummaryWriter
 
 from Incept.evaluation import Evaluator
+from Incept.utils import EarlyStopping
 
 class Trainer:
-    def __init__(self, config, logger_backends=["json", "tensorboard"]):
+    def __init__(self, config, strategy="earlystop", logger_backends=["json", "tensorboard"]):
         self.config = config
 
         # evaluation component
         self.evaluator = Evaluator(metrics=["acc", "nmi", "ari"])
         self.best_acc, self.best_nmi, self.best_ari = -1, -1, -1
         self.best_epoch = None
+
+        # stop component
+        if strategy == "earlystop":
+            self.early_stopper = EarlyStopping()
+        else:
+            self.early_stopper = None
 
         # log component
         self.json_data = defaultdict(dict) if "json" in logger_backends else None

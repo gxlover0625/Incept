@@ -1,50 +1,31 @@
-import torchvision
-import torch
 import numpy as np
-from tqdm import tqdm
-from torch.utils.data import ConcatDataset, DataLoader
+import torch
+
 from torch.optim.adam import Adam
-import os
-import json
+from torch.utils.data import ConcatDataset, DataLoader
+from tqdm import tqdm
+
 from cc_utils import Transforms
-from model import get_resnet, Network, InstanceLoss, ClusterLoss
-from Incept.evaluation import Evaluator
-from Incept.utils import EarlyStopping, BasicLogger
-from torch.utils.tensorboard import SummaryWriter
-from collections import defaultdict
+from model import get_resnet, CC, InstanceLoss, ClusterLoss
 
-from Incept.configs import load_exp_config
-class CCTrainer:
+from Incept.models import Trainer
+
+class CCTrainer(Trainer):
     def __init__(self, config, strategy="earlystop", logger_backends=["json", "tensorboard"]):
+        super().__init__(config, strategy, logger_backends)
         self.config = config
-
         # dataset processing
         self.img_transform = Transforms(size=config.image_size, s=0.5)
 
-        # evaluation component
-        self.evaluator = Evaluator(metrics=["acc", "nmi", "ari"])
-        self.best_acc, self.best_nmi, self.best_ari = -1, -1, -1
-        self.best_epoch = None
-
-        # stop strategy
-        if strategy == "earlystop":
-            self.early_stopper = EarlyStopping()
-        else:
-            self.early_stopper = None
-        
-        # log component
-        self.json_data = defaultdict(dict) if "json" in logger_backends else None
-        self.writer = SummaryWriter(log_dir=config.output_dir) if "tensorboard" in logger_backends else None
-        
     def setup(self):
         config = self.config
         resnet = get_resnet(config.resnet)
-        self.model = Network(resnet, config.feature_dim, config.cluster_num)
-        self.model.cuda()
+        self.model = CC(resnet, config.feature_dim, config.cluster_num)
+        self.model.to(config.device)
         self.optimizer = Adam(self.model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
         self.criterion_instance = InstanceLoss(config.batch_size, config.instance_temperature)
         self.criterion_cluster = ClusterLoss(config.cluster_num, config.cluster_temperature)
-
+    
     def compute_loss(self, x_i, x_j):
         config = self.config
         x_i = x_i.to(config.device)
@@ -55,57 +36,6 @@ class CCTrainer:
         loss = loss_instance + loss_cluster
         return loss, loss_instance, loss_cluster
 
-    def update_postfix(self, iterator, epoch, total_epochs, step, total_steps, *args, **kwargs):
-        update_info = {
-            "epoch": f"{epoch}/{total_epochs}",
-            "step": f"{step}/{total_steps}",
-        }
-        for key, value in kwargs.items():
-            if not value:
-                update_info[key] = f"{value:.4f}"
-            update_info[key] = value
-        
-        iterator.set_postfix(update_info)
-    
-    def log_update(self, *args, **kwargs):
-        config = self.config
-        epoch = kwargs["epoch"]
-        for key, value in kwargs.items():
-            if key != "epoch":
-                if self.json_data is not None:
-                    self.json_data[epoch][key] = value
-                
-                if self.writer is not None:
-                    self.writer.add_scalar(key, value, epoch)
-        
-        acc, nmi, ari = kwargs["acc"], kwargs["nmi"], kwargs["ari"]
-        if acc > self.best_acc:
-            self.best_acc = acc
-            self.best_nmi = nmi
-            self.best_ari = ari
-            self.best_epoch = epoch
-            if not os.path.exists(config.output_dir):
-                os.makedirs(config.output_dir, exist_ok=True)
-            # 保存模型
-            torch.save(self.model.state_dict(), os.path.join(config.output_dir, "best_model.pth"))
-    
-    def summary(self):
-        config = self.config
-        summary_data = {
-            "best_epoch": self.best_epoch,
-            "best_acc": self.best_acc,
-            "best_nmi": self.best_nmi,
-            "best_ari": self.best_ari
-        }
-        save_path = os.path.join(config.output_dir, "summary.json")
-        with open(save_path, "w") as f:
-            json.dump(summary_data, f, indent=4, ensure_ascii=False)
-        
-        save_path = os.path.join(config.output_dir, "log.json")
-        if self.json_data is not None:
-            with open(save_path, "w") as f:
-                json.dump(self.json_data, f, indent=4, ensure_ascii=False)
-            
     def train(self, dataset, eval_dataset=None):
         config = self.config
         train_dataloader = DataLoader(
@@ -140,10 +70,6 @@ class CCTrainer:
                     data_iterator, epoch, config.epochs-1, step, len(data_iterator)-1,
                     loss=loss.item(), delta_label=delta_label, acc=acc, nmi=nmi, ari=ari
                 )
-
-                if step % 50 == 0:
-                    print(
-                        f"Step [{step}]\t loss_instance: {loss_instance.item()}\t loss_cluster: {loss_cluster.item()}")
             
             # step4, evaluation
             if epoch % config.eval_epochs == 0:
@@ -196,10 +122,10 @@ class CCTrainer:
         actual = np.array(actual)
         return features, actual
 
-
+from Incept.configs import load_exp_config
 from Incept.utils import seed_everything
+import torchvision
 seed_everything(42)
-
 config = load_exp_config("CC", "CIFAR10")
 trainer = CCTrainer(config)
 train_dataset = torchvision.datasets.CIFAR10(
@@ -216,7 +142,6 @@ test_dataset = torchvision.datasets.CIFAR10(
 )
 dataset = ConcatDataset([train_dataset, test_dataset])
 
-
 eval_train_dataset = torchvision.datasets.CIFAR10(
     root=config.data_dir,
     download=True,
@@ -230,54 +155,5 @@ eval_test_dataset = torchvision.datasets.CIFAR10(
     transform=trainer.img_transform.test_transform,
 )
 eval_dataset = ConcatDataset([eval_train_dataset, eval_test_dataset])
-
-
 trainer.setup()
-
-# from torch.utils.data import Subset
-# dataset = Subset(dataset, indices=np.random.choice(len(dataset), 512))
-# eval_dataset = Subset(eval_dataset, indices=np.random.choice(len(eval_dataset), 512))
 trainer.train(dataset, eval_dataset)
-# trainer.predict(eval_dataset)
-# data_loader = DataLoader(
-#     dataset,
-#     batch_size=config.batch_size,
-#     shuffle=True,
-#     drop_last=True,
-#     num_workers=config.num_workers,
-# )
-# res = get_resnet(config.resnet)
-# model = Network(res, config.feature_dim, config.cluster_num)
-# model.cuda()
-# optimizer = Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
-# criterion_instance = InstanceLoss(config.batch_size, config.instance_temperature, config.device).to(config.device)
-# print(criterion_instance)
-# criterion_cluster = ClusterLoss(config.cluster_num, config.cluster_temperature, config.device).to(config.device)
-
-# def train():
-#     loss_epoch = 0
-#     for step, ((x_i, x_j), _) in enumerate(tqdm(data_loader)):
-#         optimizer.zero_grad()
-#         x_i = x_i.to('cuda')
-#         x_j = x_j.to('cuda')
-#         z_i, z_j, c_i, c_j = model(x_i, x_j)
-#         loss_instance = criterion_instance(z_i, z_j)
-#         loss_cluster = criterion_cluster(c_i, c_j)
-#         loss = loss_instance + loss_cluster
-#         loss.backward()
-#         optimizer.step()
-#         if step % 50 == 0:
-#             print(
-#                 f"Step [{step}/{len(data_loader)}]\t loss_instance: {loss_instance.item()}\t loss_cluster: {loss_cluster.item()}")
-#         loss_epoch += loss.item()
-#     return loss_epoch
-
-
-# for epoch in range(config.start_epoch, config.train_epochs):
-#     lr = optimizer.param_groups[0]["lr"]
-#     # break
-#     loss_epoch = train()
-#     break
-#     # if epoch % 10 == 0:
-#     #     save_model(args, model, optimizer, epoch)
-#     # print(f"Epoch [{epoch}/{args.epochs}]\t Loss: {loss_epoch / len(data_loader)}")

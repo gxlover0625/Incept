@@ -116,9 +116,9 @@ def get_resnet(name):
         raise KeyError(f"{name} is not a valid ResNet version")
     return resnets[name]
 
-class Network(nn.Module):
+class CC(nn.Module):
     def __init__(self, resnet, feature_dim, class_num):
-        super(Network, self).__init__()
+        super(CC, self).__init__()
         self.resnet = resnet
         self.feature_dim = feature_dim
         self.cluster_num = class_num

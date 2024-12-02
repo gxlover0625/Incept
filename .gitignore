@@ -4,5 +4,6 @@ __pycache__/
 /test.jsonl
 /test.json
 /test.yaml
+logs/
 test/
 **/*.log
