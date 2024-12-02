@@ -1,6 +1,7 @@
 ### model
 method: CC
 feature_dim: 128
+use_original_resnet: False
 resnet: "ResNet34"
 image_size: 224
 instance_temperature: 0.5

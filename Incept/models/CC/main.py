@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+from torch import nn
 from torch.optim.adam import Adam
 from torch.utils.data import ConcatDataset, DataLoader
 from tqdm import tqdm
@@ -9,6 +10,7 @@ from cc_utils import Transforms
 from model import get_resnet, CC, InstanceLoss, ClusterLoss
 
 from Incept.models import Trainer
+from Incept.utils import get_pretrained_resnet
 
 class CCTrainer(Trainer):
     def __init__(self, config, strategy="earlystop", logger_backends=["json", "tensorboard"]):
@@ -19,7 +21,13 @@ class CCTrainer(Trainer):
 
     def setup(self):
         config = self.config
-        resnet = get_resnet(config.resnet)
+        if config.use_original_resnet:
+            resnet = get_resnet(config.resnet)
+        else:
+            resnet = get_pretrained_resnet(config.resnet, pretrained=True)
+            resnet.rep_dim = resnet.fc.in_features
+            resnet.fc = nn.Identity()
+            
         self.model = CC(resnet, config.feature_dim, config.cluster_num)
         self.model.to(config.device)
         self.optimizer = Adam(self.model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
