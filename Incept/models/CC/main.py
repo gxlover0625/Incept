@@ -130,38 +130,38 @@ class CCTrainer(Trainer):
         actual = np.array(actual)
         return features, actual
 
-from Incept.configs import load_exp_config
-from Incept.utils import seed_everything
-import torchvision
-seed_everything(42)
-config = load_exp_config("CC", "CIFAR10")
-trainer = CCTrainer(config)
-train_dataset = torchvision.datasets.CIFAR10(
-    root=config.data_dir,
-    download=True,
-    train=True,
-    transform=trainer.img_transform,
-)
-test_dataset = torchvision.datasets.CIFAR10(
-    root=config.data_dir,
-    download=True,
-    train=False,
-    transform=trainer.img_transform,
-)
-dataset = ConcatDataset([train_dataset, test_dataset])
+# from Incept.configs import load_exp_config
+# from Incept.utils import seed_everything
+# import torchvision
+# seed_everything(42)
+# config = load_exp_config("CC", "CIFAR10")
+# trainer = CCTrainer(config)
+# train_dataset = torchvision.datasets.CIFAR10(
+#     root=config.data_dir,
+#     download=True,
+#     train=True,
+#     transform=trainer.img_transform,
+# )
+# test_dataset = torchvision.datasets.CIFAR10(
+#     root=config.data_dir,
+#     download=True,
+#     train=False,
+#     transform=trainer.img_transform,
+# )
+# dataset = ConcatDataset([train_dataset, test_dataset])
 
-eval_train_dataset = torchvision.datasets.CIFAR10(
-    root=config.data_dir,
-    download=True,
-    train=True,
-    transform=trainer.img_transform.test_transform,
-)
-eval_test_dataset = torchvision.datasets.CIFAR10(
-    root=config.data_dir,
-    download=True,
-    train=False,
-    transform=trainer.img_transform.test_transform,
-)
-eval_dataset = ConcatDataset([eval_train_dataset, eval_test_dataset])
-trainer.setup()
-trainer.train(dataset, eval_dataset)
+# eval_train_dataset = torchvision.datasets.CIFAR10(
+#     root=config.data_dir,
+#     download=True,
+#     train=True,
+#     transform=trainer.img_transform.test_transform,
+# )
+# eval_test_dataset = torchvision.datasets.CIFAR10(
+#     root=config.data_dir,
+#     download=True,
+#     train=False,
+#     transform=trainer.img_transform.test_transform,
+# )
+# eval_dataset = ConcatDataset([eval_train_dataset, eval_test_dataset])
+# trainer.setup()
+# trainer.train(dataset, eval_dataset)
