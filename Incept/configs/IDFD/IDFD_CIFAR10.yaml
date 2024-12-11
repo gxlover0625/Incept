@@ -1,0 +1,22 @@
+low_dim: 128
+tau: 1.0
+momentum: 0.5
+
+### device
+device: cuda:0
+num_workers: 8
+
+### dataset
+dataset_name: CIFAR10
+data_dir: /data2/liangguanbao/opendeepclustering/datasets
+cluster_num: 10
+
+### output
+output_dir: /data2/liangguanbao/opendeepclustering/saves/IDFD/CIFAR10
+
+### train
+epochs: 1000
+batch_size: 128
+lr: 0.0003
+weight_decay: 0.
+stopping_delta: 0.000001
