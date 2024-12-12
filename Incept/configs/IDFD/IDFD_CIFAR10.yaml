@@ -1,5 +1,6 @@
 low_dim: 128
 tau: 1.0
+tau2: 2.0
 momentum: 0.5
 
 ### device
@@ -15,8 +16,16 @@ cluster_num: 10
 output_dir: /data2/liangguanbao/opendeepclustering/saves/IDFD/CIFAR10
 
 ### train
-epochs: 1000
+epochs: 2000
+eval_epochs: 1
 batch_size: 128
-lr: 0.0003
-weight_decay: 0.
+lr: 0.03
+sgd_momentum: 0.9
+weight_decay: 0.0005
+milestones:
+  - 600
+  - 950
+  - 1300
+  - 1650
+gamma: 0.1
 stopping_delta: 0.000001

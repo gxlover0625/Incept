@@ -40,7 +40,7 @@ class Trainer:
         }
         for key, value in kwargs.items():
             if isinstance(value, float):
-                value = f"{value:.6f}"
+                value = f"{value:.8f}"
             update_info[key] = value
         iterator.set_postfix(update_info)
     
