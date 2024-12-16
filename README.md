@@ -105,6 +105,7 @@ nohup python -u models/Simultaneous/DEC/pretrain.py \
 |------|---------|-------|--------|----------|
 | DEC  |    /    | 85.96 |        |   23.93  |
 | CC   |    /    |       |        |   75.16  |
+| IDFD |    /    |       |        |   81.40  |
 
 ## Citation
 :smiley:Our paper is posted on arXiv: [A comprehensive survey on deep clustering: Taxonomy, challenges, and future directions](https://arxiv.org/abs/2206.07579). 
